@@ -1,4 +1,4 @@
-# adaptive_saw/plugin.tcl
+# plugin.tcl
 #
 # Adaptive Stop-At-Weight plugin for the Decent Espresso DE1 app.
 #
@@ -29,6 +29,7 @@ namespace eval ::plugins::adaptive_saw {
     variable author      "Ulf Schnabel"
     variable contact     "ulf.schnabel@gmail.com"
     variable version     0.1
+    variable github_repo "ulfschnabel/de1app-adaptive-saw"
     variable name        "Adaptive SAW"
     variable description "Learns per-profile gram offsets for consistent stop-at-weight"
 

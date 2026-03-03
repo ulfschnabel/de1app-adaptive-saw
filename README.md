@@ -23,18 +23,20 @@ If you ever disable this plugin, manually restore `stop_weight_before_seconds` t
 
 ## Installation
 
-### On the tablet
+### Via the GitHub plugin installer (recommended)
 
-```
-/storage/de1/de1plus/plugins/adaptive_saw/
-```
+Install [de1app_plugin_github](https://github.com/ebengoechea/de1app_plugin_github) first, then point it at this repo:  `ulfschnabel/de1app-adaptive-saw`.
 
-Copy (or clone) the `adaptive_saw/` directory there.  The quickest way from the tablet's terminal / ADB shell:
+Once installed the first time, the GitHub installer will keep it up to date automatically.
+
+### Manually on the tablet
 
 ```sh
 cd /storage/de1/de1plus/plugins
-git clone https://github.com/ulfschnabel/de1app-adaptive-saw adaptive_saw_repo
-cp -r adaptive_saw_repo/adaptive_saw .
+mkdir adaptive_saw
+cd adaptive_saw
+# Download plugin.tcl from the latest release
+curl -L https://github.com/ulfschnabel/de1app-adaptive-saw/releases/latest/download/plugin.tcl -o plugin.tcl
 ```
 
 Then in the DE1 app: **Settings → Extensions** → enable **Adaptive SAW** → restart the app.
@@ -42,7 +44,8 @@ Then in the DE1 app: **Settings → Extensions** → enable **Adaptive SAW** →
 ### Over ADB from a computer
 
 ```sh
-adb push adaptive_saw /storage/de1/de1plus/plugins/
+adb shell mkdir /storage/de1/de1plus/plugins/adaptive_saw
+adb push plugin.tcl /storage/de1/de1plus/plugins/adaptive_saw/
 ```
 
 ## Configuration
