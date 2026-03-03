@@ -65,11 +65,11 @@ namespace eval ::plugins::adaptive_saw {
             save_settings
         }
 
-        # Register shot lifecycle handlers
-        register_state_change_handler "Idle"     "Espresso" \
-            ::plugins::adaptive_saw::_on_espresso_start
-        register_state_change_handler "Espresso" "Idle" \
-            ::plugins::adaptive_saw::_on_espresso_end
+        # Register shot lifecycle handlers using the current event API
+        ::de1::event::listener::on_major_state_change_add \
+            ::plugins::adaptive_saw::_on_major_state_change
+        ::de1::event::listener::after_flow_complete_add \
+            ::plugins::adaptive_saw::_on_flow_complete
 
         set nprofiles [_count_saved_offsets]
         msg -INFO "adaptive_saw: ready — $nprofiles profile offset(s) loaded, \
@@ -77,28 +77,37 @@ alpha=$settings(alpha), max_offset=$settings(max_offset)g"
     }
 
     # -------------------------------------------------------------------------
-    # State change handlers
+    # Event handlers
     # -------------------------------------------------------------------------
 
-    proc _on_espresso_start {old new} {
-        # Snapshot profile identity and target weight before anything changes.
-        set ::plugins::adaptive_saw::_profile_key  [_profile_key]
-        set ::plugins::adaptive_saw::_target        [_target_weight]
-        set ::plugins::adaptive_saw::_shot_active   1
+    # Fires on every major state change (Idle->Espresso, Espresso->Idle, etc.)
+    # event_dict keys: this_state, previous_state
+    proc _on_major_state_change {event_dict} {
+        set this_state [dict get $event_dict this_state]
 
-        # Inject the learned gram offset AFTER SAW's own on_espresso_start has
-        # run and reset _early_by_grams to 0.  "after idle" guarantees we
-        # execute after all synchronous state-change handlers complete.
-        after idle ::plugins::adaptive_saw::_inject_offset
+        if { $this_state eq "Espresso" } {
+            # Snapshot profile identity and target weight before anything changes.
+            set ::plugins::adaptive_saw::_profile_key [_profile_key]
+            set ::plugins::adaptive_saw::_target       [_target_weight]
+            set ::plugins::adaptive_saw::_shot_active  1
+
+            # Inject the learned gram offset AFTER SAW's own on_espresso_start
+            # has run and reset _early_by_grams to 0.
+            # "after idle" guarantees we run after all synchronous handlers.
+            after idle ::plugins::adaptive_saw::_inject_offset
+        }
     }
 
-    proc _on_espresso_end {old new} {
+    # Fires after flow (espresso/hotwater) is complete.
+    # We use this rather than on_major_state_change Espresso->Idle because
+    # final_espresso_weight is guaranteed to be set by this point.
+    proc _on_flow_complete {event_dict} {
         variable settings
         variable _profile_key
         variable _target
         variable _shot_active
 
-        # Guard: only adapt if we saw the shot start
+        # Guard: only adapt if we saw an espresso shot start
         if { ! $_shot_active } { return }
         set _shot_active 0
 
@@ -111,7 +120,7 @@ alpha=$settings(alpha), max_offset=$settings(max_offset)g"
 
         # Skip adaptation for aborted / very short shots
         if { $actual <= 0 || $actual < $_target * 0.4 } {
-            msg -INFO "adaptive_saw: skipping adaptation — \
+            msg -INFO "adaptive_saw: skipping adaptation - \
 shot appears aborted (actual=${actual}g, target=${_target}g)"
             return
         }
@@ -130,8 +139,7 @@ shot appears aborted (actual=${actual}g, target=${_target}g)"
         save_plugin_settings adaptive_saw
 
         msg -INFO [format \
-            "adaptive_saw: '%s'  actual=%.1fg  target=%.1fg  \
-overshoot=%+.2fg  offset %.2f->%.2fg" \
+            "adaptive_saw: '%s'  actual=%.1fg  target=%.1fg  overshoot=%+.2fg  offset %.2f->%.2fg" \
             $_profile_key $actual $_target $overshoot $old_offset $new_offset]
     }
 
