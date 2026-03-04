@@ -203,7 +203,7 @@ shot appears aborted (actual=${actual}g, target=${_target}g)"
 
     proc _set_offset {key value} {
         variable settings
-        set settings("offset_${key}") $value
+        set settings(offset_${key}) $value
     }
 
     proc _count_saved_offsets {} {
